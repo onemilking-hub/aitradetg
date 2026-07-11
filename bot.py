@@ -217,7 +217,7 @@ async def send_promo_after_start(user_id):
             pass
 
     while True:
-        await asyncio.sleep(random.randint(3*3600, 4*3600))
+        await asyncio.sleep(random.randint(4*3600, 5*3600))
 
         try:
             promo = random.choice(PROMO_REPEATING)
