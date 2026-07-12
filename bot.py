@@ -79,9 +79,9 @@ ADMIN_ID = 8327782517
 WELCOME_VIDEO = "https://files.catbox.moe/4b0psz.mp4"
 
 PLANS = {
-    "plan_normal": {"name": "Normal Plan", "percent": 25, "text": "💰 <b>Normal Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 25%\n• Compounding: Not Included\n• Example Period: 30 days / 1 month projection only\n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $100 minimum.\n\nPlease enter your desired deposit amount:"},
-    "plan_premium": {"name": "Premium Plan", "percent": 35, "text": "💰 <b>Premium Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 35%\n• Compounding: Not Included\n• Example Period: 30 days / 1 month projection only\n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $500 to start enjoying Premium benefits.\n\nPlease enter your desired deposit amount:"},
-    "plan_diamond": {"name": "Diamond Plan", "percent": 50, "text": "💎 <b>Diamond Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 50%\n• Compounding: Available\n• Example Period: 30 days / 1 month projection only\n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $2000 to start enjoying Diamond benefits.\n\nPlease enter your desired deposit amount:"},
+    "plan_normal": {"name": "Normal Plan", "percent": 10 "text": "💰 <b>Normal Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 10%\n• Compounding: Not Included\n•  Period: 30 days \n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $100 minimum.\n\nPlease enter your desired deposit amount:"},
+    "plan_premium": {"name": "Premium Plan", "percent": 15 "text": "💰 <b>Premium Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 15%\n• Compounding: Not Included\n•  Period: 30 days  \n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $500 to start enjoying Premium benefits.\n\nPlease enter your desired deposit amount:"},
+    "plan_diamond": {"name": "Diamond Plan", "percent": 25 "text": "💎 <b>Diamond Plan Activated</b>\n\n📊 Plan Highlights:\n• Daily Returns: 25%\n• Compounding: Available\n•  Period: 30 days \n• Bot Access: Ongoing\n\n💵 Activation Requirement: Deposit $1500 to start enjoying Diamond benefits.\n\nPlease enter your desired deposit amount:"},
 }
 
 user_state = {}
@@ -251,11 +251,11 @@ async def daily_profit_task():
 
             percent = 0
             if "diamond" in clean:
-                percent = 50
-            elif "premium" in clean:
-                percent = 35
-            elif "normal" in clean:
                 percent = 25
+            elif "premium" in clean:
+                percent = 15
+            elif "normal" in clean:
+                percent = 10
 
             if percent > 0 and balance > 0:
                 daily_profit = round(balance * (percent / 100), 2)
