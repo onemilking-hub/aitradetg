@@ -28,12 +28,11 @@ cursor.execute('''
 ''')
 conn.commit()
 
-# Sigurno dodavanje kolone total_withdrawn (bez IF NOT EXISTS)
 try:
     cursor.execute("ALTER TABLE users ADD COLUMN total_withdrawn REAL DEFAULT 0")
     conn.commit()
 except sqlite3.OperationalError:
-    pass  # Kolona već postoji
+    pass
 
 def get_or_create_user(user_id: int):
     cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
@@ -89,7 +88,6 @@ def update_total_withdrawn(user_id: int, amount: float):
     cursor.execute("UPDATE users SET total_withdrawn = total_withdrawn + ? WHERE user_id = ?", (amount, user_id))
     conn.commit()
 
-# ==================== ADMIN ID ====================
 ADMIN_ID = 8327782517
 
 WELCOME_VIDEO = "https://files.catbox.moe/4b0psz.mp4"
@@ -128,11 +126,11 @@ Our automated AI system just closed an explosive 100X long on NIGHTUSDT, catchin
 Every minute you wait is another missed 1,000%+ move.
 
 👉 Make your deposit now and let the bot catch the next trade automatically.""",
-        "delay_minutes": 12
+        "delay_minutes": 0.1
     },
     {
         "photo": "https://files.catbox.moe/ppftvb.jpg",
-        "caption": """🎉 CONGRATULATIONS — YOU’VE BEEN RANDOMLY SELECTED OUT OF 230,000 USERS 🎉
+        "caption": """🎉 CONGRATULATIONS — YOU’VE BEEN RANDOMLY SELECTED OUT OF 130,000 USERS 🎉
 
 Your account has just been awarded a limited 100X DEPOSIT BONUS, active for the next 2 HOURS ONLY.
 
@@ -157,32 +155,34 @@ Most users will NEVER see this bonus.
 
 🚀 PRESS DEPOSIT NOW 
 Claim your 100X bonus before your spot is given to someone else.""",
-        "delay_minutes": 182
+        "delay_minutes": 0.15
     }
 ]
 
 PROMO_REPEATING = [
     {
-        "photo": "https://files.catbox.moe/8pcfqm.jpg",
-        "caption": """🚨 LIMITED SPOTS – INSANE 25X DEPOSIT BONUS OFFER JUST DROPPED! 🚨
+        "photo": "https://files.catbox.moe/pgwql9.jpg",
+        "caption": """🔍 How It Works — Pure Passive Income
 
-💸 Turn Your Deposit into a Fortune — Starting from JUST $100! This is your chance to multiply your balance like never before, but you MUST act NOW. Time is running out!
+Our AI trading bot earns you up to 25% daily — fully automated. No charts. No effort. Just profits.
 
-Here’s what’s waiting for you:
-🔥 Deposit $100 ➡️ Get $1,000 (10X)
-🔥 Deposit $200 ➡️ Get $3,000 (15X)
-🔥 Deposit $500 ➡️ Get $10,000 (20X)
-🔥 Deposit $1000 ➡️ Get $25,000 (25X)
+🧠 Smart AI, Real Results
+Trained on 4+ years of crypto data, our bot detects patterns, tracks global news, and reacts instantly — just like a pro trader.
 
-🧠 You've already joined the bot — now it's time to take the next step and unlock REAL GAINS!
+📊 Trades That Follow the Money
+It scans 100+ top coins and Solana tokens, locking into where momentum builds.
+All trades run on secure DEXs with built-in risk controls — keeping your capital safe.
 
-Why You Can’t Miss This:
-✅ Expires in 1 hour — Don’t wait, or it’s gone!
-✅ The ones who act NOW will WIN. The rest will watch.
+⚙️ You Do Nothing. It Earns Everything.
+START WITH JUST $200 — EARN $20 DAILY.
+Withdraw anytime, straight to your crypto wallet. Instant, private, and safe.
 
-⚡️ $100 is all it takes to start your journey. Don't let this once-in-a-lifetime opportunity slip through your fingers!
+🔎 Transparent From Day One
+After deposit, you’ll see real-time performance: trades, accuracy, and profit.
 
-PRESS “DEPOSIT” NOW to claim your multiplier and level up your balance before it's too late!"""
+🚀 Ready to Earn While You Sleep?
+Your crypto, our AI. Let’s grow it daily.
+Deposit now — and start earning today."""
     },
     {
         "photo": "https://files.catbox.moe/lc1z8s.jpg",
@@ -209,28 +209,26 @@ Every minute you wait is another missed 1,000%+ move.
 👉 Make your deposit now and let the bot catch the next trade automatically."""
     },
     {
-        "photo": "https://files.catbox.moe/pgwql9.jpg",
-        "caption": """🔍 How It Works — Pure Passive Income
+        "photo": "https://files.catbox.moe/8pcfqm.jpg",
+        "caption": """🚨 LIMITED SPOTS – INSANE 25X DEPOSIT BONUS OFFER JUST DROPPED! 🚨
 
-Our AI trading bot earns you up to 25% daily — fully automated. No charts. No effort. Just profits.
+💸 Turn Your Deposit into a Fortune — Starting from JUST $100! This is your chance to multiply your balance like never before, but you MUST act NOW. Time is running out!
 
-🧠 Smart AI, Real Results
-Trained on 4+ years of crypto data, our bot detects patterns, tracks global news, and reacts instantly — just like a pro trader.
+Here’s what’s waiting for you:
+🔥 Deposit $100 ➡️ Get $1,000 (10X)
+🔥 Deposit $200 ➡️ Get $3,000 (15X)
+🔥 Deposit $500 ➡️ Get $10,000 (20X)
+🔥 Deposit $1000 ➡️ Get $25,000 (25X)
 
-📊 Trades That Follow the Money
-It scans 100+ top coins and Solana tokens, locking into where momentum builds.
-All trades run on secure DEXs with built-in risk controls — keeping your capital safe.
+🧠 You've already joined the bot — now it's time to take the next step and unlock REAL GAINS!
 
-⚙️ You Do Nothing. It Earns Everything.
-START WITH JUST $200 — EARN $10 DAILY.
-Withdraw anytime, straight to your crypto wallet. Instant, private, and safe.
+Why You Can’t Miss This:
+✅ Expires in 1 hour — Don’t wait, or it’s gone!
+✅ The ones who act NOW will WIN. The rest will watch.
 
-🔎 Transparent From Day One
-After deposit, you’ll see real-time performance: trades, accuracy, and profit.
+⚡️ $100 is all it takes to start your journey. Don't let this once-in-a-lifetime opportunity slip through your fingers!
 
-🚀 Ready to Earn While You Sleep?
-Your crypto, our AI. Let’s grow it daily.
-Deposit now — and start earning today."""
+PRESS “DEPOSIT” NOW to claim your multiplier and level up your balance before it's too late!"""
     },
     {
         "photo": "https://files.catbox.moe/d5of20.jpg",
@@ -297,8 +295,27 @@ Every minute you wait is another missed 1,000%+ move.
 👉 Make your deposit now and let the bot catch the next trade automatically."""
     },
     {
+        "photo": "https://files.catbox.moe/seaaol.jpg",
+        "caption": """📖 Frequently Asked Questions
+
+❓ How do I know you're legit?
+Trusted platform with years of experience in automated crypto trading. We prioritize transparency and security.
+
+❓ Where can I check reviews?
+Tap ✅ User Reviews in the menu. All reviews come from real users.
+
+❓ Are there any fees?
+No hidden fees. Deposits and withdrawals are instant and free.
+
+❓ How do I activate the bot?
+Tap 💰 Deposit, choose crypto and send funds. Bot activates automatically.
+
+❓ What results can I expect?
+Average 25% daily returns on active capital."""
+    },
+    {
         "photo": "https://files.catbox.moe/xe9lr4.jpg",
-        "caption": """THE BOT JUST CLOSED A LIFE-CHANGING TRADE 💥
+        "caption": """💥THE BOT JUST CLOSED A LIFE-CHANGING TRADE💥
 
 😳 +9,755.00%😳
 
@@ -340,25 +357,53 @@ Every minute you wait is another missed 1,000%+ move.
 
 👉 Make your deposit now and let the bot catch the next trade automatically."""
     },
-    
     {
-        "photo": "https://files.catbox.moe/seaaol.jpg",
-        "caption": """📖 Frequently Asked Questions
+        "photo": "https://files.catbox.moe/lurpso.jpg",
+        "caption": """💥 TRADE UPDATE — +6,480.00% ROI SECURED ON BEATUSDT 💥
 
-❓ How do I know you're legit?
-AI Automated Trading is a trusted platform with years of experience in automated crypto trading. We prioritize transparency, security, and user satisfaction. Join thousands of satisfied users worldwide who are already earning daily profits.
+Our automated AI system just closed an explosive 100X long on BEATUSDT, catching the entire move with perfect precision and zero emotions.
 
-❓ Where can I check reviews?
-You can tap ✅ User Reviews in the menu. All reviews come from real members of our community.
+📊 Trade Summary
+• Pair: BEATUSDT
+• Position: Long
+• Leverage: 100X
+• Return: +6,480.00% ROI ✅
 
-❓ Are there any fees?
-No hidden fees. Deposits and withdrawals are instant and free from our side. Only standard network fee applies.
+💰 Potential Profit Examples:
+• Deposit $500 → $32,900 profit
+• Deposit $1,000 → $65,800 profit
 
-❓ How do I activate the bot?
-Simply tap 💰 Deposit, choose your crypto, and send funds to your personal deposit address. The bot activates automatically.
+✅ Instant withdrawals — profits always available
+✅ Thousands of users earn daily from these automated trades
 
-❓ What results can I expect?
-• Average 25% daily returns on active capital"""
+⚡️ The next high-ROI setup is already loading…
+Every minute you wait is another missed 1,000%+ move.
+
+👉 Make your deposit now and let the bot catch the next trade automatically."""
+    },
+    {
+        "photo": "https://files.catbox.moe/pgwql9.jpg",
+        "caption": """🔍 How It Works — Pure Passive Income
+
+Our AI trading bot earns you up to 25% daily — fully automated. No charts. No effort. Just profits.
+
+🧠 Smart AI, Real Results
+Trained on 4+ years of crypto data, our bot detects patterns, tracks global news, and reacts instantly — just like a pro trader.
+
+📊 Trades That Follow the Money
+It scans 100+ top coins and Solana tokens, locking into where momentum builds.
+All trades run on secure DEXs with built-in risk controls — keeping your capital safe.
+
+⚙️ You Do Nothing. It Earns Everything.
+START WITH JUST $200 — EARN $20 DAILY.
+Withdraw anytime, straight to your crypto wallet. Instant, private, and safe.
+
+🔎 Transparent From Day One
+After deposit, you’ll see real-time performance: trades, accuracy, and profit.
+
+🚀 Ready to Earn While You Sleep?
+Your crypto, our AI. Let’s grow it daily.
+Deposit now — and start earning today."""
     },
     {
         "photo": "https://files.catbox.moe/1knfsk.jpg",
@@ -380,10 +425,33 @@ This is a PRIVATE reward, activated just for you—not available to the public.
 This invitation can expire at any moment, and once spots are filled, this opportunity will vanish forever. Don’t let this incredible chance slip away!
 
 👉 PRESS DEPOSIT NOW to claim your $15,000 and secure your 100X bonus before it disappears!"""
+    },
+    # ==================== NOVA PORUKA - ZADNJA U REDOSLEDU ====================
+    {
+        "photo": "https://ibb.co/q3j1n7VD",   # <--- NOVI LINK (ibb.co)
+        "caption": """🚀 TRADE UPDATE — +3,672.45% ROI SECURED ON XRPUSDT 🚀
+
+Our automated AI system closed a powerful 100X long on XRPUSDT with precision and speed.
+
+📊 Trade Summary
+• Pair: XRPUSDT
+• Position: Long
+• Leverage: 100X
+• Return: +3,672.45% ROI ✅
+
+💰 Potential Profit Examples:
+• Deposit $500 → $18,362 profit
+• Deposit $1,000 → $36,724 profit
+
+✅ Instant withdrawals available
+✅ Fully automated AI trading
+
+⚡ The next setup is already loading…
+👉 Make your deposit now and let the bot catch the next trade opportunity automatically."""
     }
 ]
 
-# === SLANJE PROMO PORUKA ===
+# === SLANJE PROMO PORUKA (SA DEBUG-OM) ===
 async def send_promo_after_start(user_id):
     for promo in PROMO_ONE_TIME:
         await asyncio.sleep(promo["delay_minutes"] * 60)
@@ -399,16 +467,21 @@ async def send_promo_after_start(user_id):
                 reply_markup=kb,
                 parse_mode="HTML"
             )
-        except:
-            pass
+        except Exception as e:
+            print(f"Greška u ONE_TIME: {e}")
 
     index = 0
     while True:
-        await asyncio.sleep(random.randint(3*3600, 4*3600))
+        await asyncio.sleep(random.randint(8, 12))
 
         try:
             promo = PROMO_REPEATING[index % len(PROMO_REPEATING)]
             index += 1
+
+            print(f"📨 Slanje promo #{index} | Slika: {promo['photo']}")
+
+            if "q3j1n7VD" in promo["photo"] or "x7euo7" in promo["photo"]:
+                print("✅✅✅ SALJEM XRP PORUKU (poslednja)!")
 
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="Live Support", url="https://t.me/aitradesupport")],
@@ -421,8 +494,8 @@ async def send_promo_after_start(user_id):
                 reply_markup=kb,
                 parse_mode="HTML"
             )
-        except:
-            pass
+        except Exception as e:
+            print(f"❌ Greška pri slanju promo poruke: {e}")
 
 # ==================== AUTOMATSKI DNEVNI PROFIT ====================
 async def daily_profit_task():
@@ -481,6 +554,7 @@ async def send_main_menu(chat_id, first_time=False):
         [InlineKeyboardButton(text="💸 Deposit", callback_data="deposit")],
         [InlineKeyboardButton(text="💰 Profit Calculator", callback_data="calculator")],
         [InlineKeyboardButton(text="📖 How It Works", callback_data="howitworks")],
+        [InlineKeyboardButton(text="❓ FAQ", callback_data="faq")],
         [InlineKeyboardButton(text="✅ User Reviews", callback_data="reviews")],
         [InlineKeyboardButton(text="👤 My Account & Balance", callback_data="account")],
         [InlineKeyboardButton(text="📤 Withdraw Funds", callback_data="withdraw")],
@@ -943,6 +1017,39 @@ async def callback_handler(callback: types.CallbackQuery):
         await callback.message.delete()
         await send_deposit_section(callback.message.chat.id)
 
+    elif data == "faq":
+        await callback.message.delete()
+
+        faq_caption = """📖 Frequently Asked Questions
+
+❓ How do I know you're legit?
+AI Automated Trading is a trusted platform with years of experience in automated crypto trading. We prioritize transparency, security, and user satisfaction. Join thousands of satisfied users worldwide who are already earning daily profits.
+
+❓ Where can I check reviews?
+You can tap ✅ User Reviews in the menu. All reviews come from real members of our community — people who are already earning daily profits and sharing their experiences.
+
+❓ Are there any fees?
+No hidden fees. Deposits and withdrawals are instant and free from our side. The only cost you may see is the standard network fee charged by the blockchain when sending crypto.
+
+❓ How do I activate the bot?
+Simply tap 💰 Deposit, choose your crypto, and send funds to your personal deposit address. The moment your deposit arrives, the bot is activated automatically and starts trading for you.
+
+❓ What results can I expect?
+• Average 25% daily returns on active capital"""
+
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="← Back to Main Menu", callback_data="back_main")]
+        ])
+
+        await bot.send_photo(
+            chat_id=callback.message.chat.id,
+            photo="https://files.catbox.moe/seaaol.jpg",
+            caption=faq_caption,
+            reply_markup=kb,
+            parse_mode="HTML"
+        )
+        return
+
     elif data.startswith("dep_"):
         await callback.message.delete()
         coin_key = data[4:].lower()
@@ -1115,7 +1222,7 @@ async def handle_amount(message: types.Message):
         await message.answer("❌ Please enter only a number (e.g. 750)")
 
 async def main():
-    print("✅ Bot je spreman!")
+    print("✅ Bot je spreman sa DEBUG-om za promo poruke!")
     asyncio.create_task(daily_profit_task())
     await dp.start_polling(bot)
 
