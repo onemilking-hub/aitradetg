@@ -126,7 +126,7 @@ Our automated AI system just closed an explosive 100X long on NIGHTUSDT, catchin
 Every minute you wait is another missed 1,000%+ move.
 
 👉 Make your deposit now and let the bot catch the next trade automatically.""",
-        "delay_minutes": 0.1
+        "delay_minutes": 17
     },
     {
         "photo": "https://files.catbox.moe/ppftvb.jpg",
@@ -155,7 +155,7 @@ Most users will NEVER see this bonus.
 
 🚀 PRESS DEPOSIT NOW 
 Claim your 100X bonus before your spot is given to someone else.""",
-        "delay_minutes": 0.15
+        "delay_minutes": 144
     }
 ]
 
@@ -472,7 +472,7 @@ async def send_promo_after_start(user_id):
 
     index = 0
     while True:
-        await asyncio.sleep(random.randint(8, 12))
+        await asyncio.sleep(random.randint(3*3600, 4*3600))
 
         try:
             promo = PROMO_REPEATING[index % len(PROMO_REPEATING)]
